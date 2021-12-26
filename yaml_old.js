@@ -1,9 +1,9 @@
 /**
- * @name YAML1
+ * @name YAML
  * @namespace
 */
 
-var YAML1 = 
+var YAML = 
 (function() {
     var errors = [],
         reference_blocks = [],
@@ -86,7 +86,7 @@ var YAML1 =
         client.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
                 var txt = this.responseText;
-                ondone(YAML1.eval(txt));
+                ondone(YAML.eval(txt));
             }
         };
         client.open('GET', src);
@@ -459,16 +459,16 @@ var YAML1 =
         
     return {        
         /**
-         * Load and parse a YAML1 file from a URL.
-         * @param {String} src URL from where to load the YAML1 file
+         * Load and parse a YAML file from a URL.
+         * @param {String} src URL from where to load the YAML file
          * @param {Function} ondone Function that will be called when the file is parsed. The result is passed as an argument.
          * @function
          
         fromURL : fromURL,*/
         
         /**
-         * Parse a YAML1 file from a string.
-         * @param {String} str String with the YAML1 file contents.
+         * Parse a YAML file from a string.
+         * @param {String} str String with the YAML file contents.
          * @function
          */
         eval : eval,
@@ -488,3 +488,4 @@ var YAML1 =
         getProcessingTime : function() { return processing_time; }
     }
 })();
+

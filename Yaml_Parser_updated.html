@@ -1,0 +1,145 @@
+<style>
+  #byte_content {
+    margin: 5px 0;
+    max-height: 100px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  #byte_range { margin-top: 5px; }
+</style>
+
+<div><text>Select a file to read deployment config: </text><input type="file" id="files" name="file" /><br><br>
+Upload File to read categories:<span class="readConfigs"><button>Upload</button></span><br></div>
+<div><p id="dropdown"></p></div>
+<div><p id="generateTetBox"></p></div>
+<div><p id="generateSnip"></p></div>
+<head>
+<script src="yaml.js"></script>
+<script src="yamlparse.js"></script>
+<script>
+	var file_json;
+	var matched;
+	function readConfig() {
+
+    var files = document.getElementById('files').files;
+    if (!files.length) {
+      alert('Please select a file!');
+      return;
+    }
+
+    var file = files[0];
+    var reader = new FileReader();
+
+    // If we use onloadend, we need to check the readyState.
+    reader.onloadend = function(evt) {
+      if (evt.target.readyState == FileReader.DONE) {
+		document.getElementById('dropdown').innerHTML = "";
+		file_json = YAML1.eval(evt.target.result);
+		resiult1 = file_json;
+		dropdown = "Please Select A Deployment Category: <select id=\"configs\">";
+		var pause = "";
+		for(var line = 0; line < resiult1["jobs"].length; line++){
+			if (resiult1["jobs"][line]["config"].toLowerCase() != 'pause') {
+				dropdown = dropdown+"<option value=\""+resiult1["jobs"][line]["config"]+" - "+resiult1["jobs"][line]["category"]+"\" config=\""+resiult1["jobs"][line]["config"]+"\" category=\""+resiult1["jobs"][line]["category"]+"\">"+resiult1["jobs"][line]["config"]+" - "+resiult1["jobs"][line]["category"]+"</option>";
+				//console.log(resiult1["jobs"][line]["config"]+' - '+resiult1["jobs"][line]["category"]);
+			}
+		}
+        dropdown = dropdown+"</select>&nbsp&nbsp&nbsp<button onclick=\"generate_textBoxes()\">Submit</button>";
+		document.getElementById('dropdown').innerHTML = dropdown;
+		document.getElementById('generateTetBox').innerHTML = "";
+		document.getElementById('generateSnip').innerHTML = "";
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+	}
+  
+	document.querySelector('.readConfigs').addEventListener('click', function(evt) {
+    if (evt.target.tagName.toLowerCase() == 'button') {
+      readConfig();
+    }
+	}, false);
+	function generate_textBoxes() {
+        //alert("generate button clicked");		
+		//resiult2 = YAML1.eval(evt1.target.result);
+		var resiult2 = file_json;
+		var configs = document.getElementById('configs');
+		var selected = configs.options[configs.selectedIndex];
+		var config = selected.getAttribute('config');
+		var category = selected.getAttribute('category');
+		//alert("selected option config is: "+config +"   category is: "+category);
+		var text="<text>";
+		for(var line = 0; line < resiult2["jobs"].length; line++){
+			if (resiult2["jobs"][line]["config"].toLowerCase() == config.toLowerCase() && resiult2["jobs"][line]["category"].toLowerCase() == category.toLowerCase()) {
+				matched = line;
+				pairs = resiult1["jobs"][line];
+				for (key in pairs) {
+					if (key == "parameters") {
+						text = text+"&nbsp&nbspparameters:<br>";
+						params1 = resiult1["jobs"][line][key];
+						for (params2 in params1) {
+							//console.log(params2 +' -> '+params1[params2]);
+							text = text+"&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp"+params2+": <input type=\"text\" id=\""+params2+"\" name=\""+params2+"\" title=\"params\" value=\""+params1[params2]+"\"><br>";
+						}
+					} else if( key == "name") {
+						text = text+"- "+key+": <input type=\"text\" id=\""+key+"\" name=\""+key+"\" title=\"default\" value=\""+pairs[key]+"\" readonly><br>";
+					} else {
+						//console.log(key +' -> '+pairs[key]);
+						text = text+"&nbsp&nbsp"+key+": <input type=\"text\" id=\""+key+"\" name=\""+key+"\" title=\"default\" value=\""+pairs[key]+"\" readonly><br>";
+					}
+						
+				}
+			}
+		}
+		text = text+"<br><br><label>Add Pause</label><input id=\"pause_job\" type=\"checkbox\" name=\"pause_job\" value=\"pause\"/></text><br><br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<button onclick=\"generate_snippet()\">genrateSnippet</button>"
+		//console.log(text);
+		document.getElementById('generateTetBox').innerHTML = text;
+		document.getElementById('generateSnip').innerHTML = "";
+	}
+	function generate_snippet() {
+		var input_tags = document.getElementsByTagName("input");
+		gen_sinpp = [];
+		gen_snip ={};
+		parameters={};
+		for(var inputs = 0; inputs < input_tags.length; inputs++){
+			if( input_tags[inputs].type.toLowerCase() == "text" && input_tags[inputs].title == "params"){
+				parameters[input_tags[inputs].id] = document.getElementById(input_tags[inputs].id).value;
+			} else if ( input_tags[inputs].type.toLowerCase() == "text" && input_tags[inputs].title == "default"){
+				gen_snip[input_tags[inputs].id] = document.getElementById(input_tags[inputs].id).value;
+			}
+		}
+		gen_sinpp.push(gen_snip);
+		gen_sinpp[0]["parameters"]=parameters;
+		file_json["jobs"][matched] = gen_sinpp[0];
+		var checkBox = document.getElementById("pause_job");
+		var pause = {}
+		if( checkBox.checked == true ){
+			pause["name"] = document.getElementById("name").value;
+			pause["category"] = document.getElementById("category").value;
+			pause["config"] = "pause";
+			gen_sinpp[1]=pause;
+			file_json['jobs'].splice(matched+1, 0, pause);
+		}
+		//console.log(JSON.stringify(gen_sinpp));
+		yaml_content = YAML.stringify(JSON.parse(JSON.stringify(gen_sinpp)));
+		document.getElementById('generateSnip').innerHTML = "<textarea rows=\""+yaml_content.split(/\r\n|\r|\n/).length+"\" cols=\"100\">"+yaml_content+"</textarea><br><br><br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<button onclick=\"download_file()\">Download</button>";
+	}
+	function download_file() {
+		//2021-12-26 23:22:39:149
+		var filename = document.getElementById('files').value.split(/(\\|\/)/g).pop().replace(".yml","");
+		var today = new Date();
+		var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+		var time = today.getHours() + "" + today.getMinutes() + "" + today.getSeconds();
+		filename = filename+"_"+date+'_'+time+".yml";
+		var element = document.createElement('a');
+		element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(YAML.stringify(file_json)));
+		element.setAttribute('download', filename);
+
+		element.style.display = 'none';
+		document.body.appendChild(element);
+
+		element.click();
+
+		document.body.removeChild(element);
+	}
+</script>
+</head>
